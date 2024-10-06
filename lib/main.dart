@@ -1,12 +1,15 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_change_notifier_provider/couter_controller.dart';
+import 'package:riverpod_change_notifier_provider/database/isar_helper.dart';
+import 'package:riverpod_change_notifier_provider/database/user_dado.dart';
+import 'package:riverpod_change_notifier_provider/models/user.dart';
+import '../item.dart';
+import '../task_notifier.dart';
 
-//PASO 4: Crear provedor
-final counterProvider = ChangeNotifierProvider((ref) => CounterController());
+void main(List<String> args) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await IsarHelper.instance.init();
 
-void main() {
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -16,55 +19,221 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Multi App Flutter',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyCounterWidget(title: 'Flutter Demo Home Page'),
+      home: const HomeScreen(),
     );
   }
 }
 
-//PASO 5: Donde vas a usar tu provedor, debes de convertir el widget a ConsumerWidget
-// No olvida añadir el WidgetRef en el contructor
-class MyCounterWidget extends ConsumerWidget {
-  const MyCounterWidget({
-    super.key,
-    required this.title,
-  });
-
-  final String title;
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // PASO 6: Crear variable que permite gestionar mi gestor de estado
-    final counterState = ref.watch(counterProvider);
-
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(title),
-      ),
+      appBar: AppBar(title: const Text('Selecciona una opción')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const IsarExample()),
+                );
+              },
+              child: const Text('Ir a Pantalla de usuarios'),
             ),
-            Text(
-              '${counterState.getCount}',
-              style: Theme.of(context).textTheme.headlineMedium,
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const TaskListScreenApp()),
+                );
+              },
+              child: const Text('Ir a Lista de Tareas'),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class IsarExample extends StatefulWidget {
+  const IsarExample({super.key});
+
+  @override
+  State<IsarExample> createState() => _IsarExampleState();
+}
+
+class _IsarExampleState extends State<IsarExample> {
+  final controller = TextEditingController();
+  final dado = UserDado();
+  //List<User> users = [];
+
+  @override
+  void initState() {
+    super.initState();
+    //dado.getAll().then((value) {
+    //  setState(() {
+    //    users = value;
+    //  });
+    //});
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Isar Example'),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                    child: TextField(
+                  controller: controller,
+                  decoration:
+                      const InputDecoration(hintText: 'Type the user name'),
+                )),
+                ElevatedButton(
+                    onPressed: () async {
+                      User user = User()..name = controller.text;
+                      final id = await dado.upset(user);
+                      user.id = id;
+                      controller.clear();
+                      //setState(() {
+                      //  users.add(user);
+                      //});
+                    },
+                    child: const Text('Create User'))
+              ],
+            ),
+            StreamBuilder<List<User>>(
+                initialData: const [],
+                stream: dado.watchUsers(),
+                builder: (context, snapshot) {
+                  final users = snapshot.data ?? [];
+                  return ListView.builder(
+                      primary: false,
+                      shrinkWrap: true,
+                      itemCount: users.length,
+                      itemBuilder: (ctx, index) {
+                        final user = users[index];
+                        return ListTile(
+                          leading: Text("${user.id}"),
+                          title: Text(user.name),
+                          trailing: IconButton(
+                              onPressed: () {
+                                dado.deleteOne(user);
+                                //users.removeWhere(
+                                 //   (element) => user.id == element.id);
+                              },
+                              icon: Icon(Icons.delete)),
+                        );
+                      });
+                }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TaskListScreenApp extends StatelessWidget {
+  const TaskListScreenApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Task Manager',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: const TaskListScreen(),
+    );
+  }
+}
+
+class TaskListScreen extends ConsumerWidget {
+  const TaskListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasks = ref.watch(taskProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Lista de Tareas'),
+      ),
+      body: tasks.isEmpty
+          ? const Center(
+              child: Text('No hay tareas. ¡Agrega una!'),
+            )
+          : ListView.builder(
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                final task = tasks[index];
+                return Item(task: task);
+              },
+            ),
       floatingActionButton: FloatingActionButton(
-        onPressed: counterState.increment,
-        tooltip: 'Increment',
+        onPressed: () {
+          _showAddTaskDialog(context, ref);
+        },
+        tooltip: 'Agregar tarea',
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  void _showAddTaskDialog(BuildContext context, WidgetRef ref) {
+    final TextEditingController controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Agregar nueva tarea'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(labelText: 'Título de la tarea'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Agregar'),
+              onPressed: () {
+                if (controller.text.isNotEmpty) {
+                  ref.read(taskProvider.notifier).addTask(controller.text);
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.riverpod_change_notifier_provider"
+    namespace "com.example.isar_flutter_libs"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

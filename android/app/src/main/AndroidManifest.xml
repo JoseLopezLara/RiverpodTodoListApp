@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+ package="com.example.isar_flutter_libs">
     <application
         android:label="riverpod_change_notifier_provider"
         android:name="${applicationName}"
